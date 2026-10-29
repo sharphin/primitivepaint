@@ -1,0 +1,9 @@
+[package]
+name = "pp-file"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+pp-core.workspace = true
+miniz_oxide.workspace = true

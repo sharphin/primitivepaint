@@ -1,0 +1,34 @@
+[workspace]
+resolver = "3"
+members = ["crates/pp-core", "crates/pp-file", "crates/pp-app"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+license = "MIT OR Apache-2.0"
+
+[workspace.dependencies]
+pp-core = { path = "crates/pp-core" }
+pp-file = { path = "crates/pp-file" }
+winit = "0.30.13"
+wgpu = "30.0.1"
+pollster = "1.0.1"
+bytemuck = { version = "1.25", features = ["derive"] }
+log = "0.4"
+env_logger = "0.11"
+fontdue = "0.9"
+miniz_oxide = "0.8"
+rfd = "0.15"
+
+[profile.release]
+lto = "thin"
+codegen-units = 1
+panic = "abort"
+
+# 開発中もブラシ処理が重くならないよう、依存クレートと core は最適化する
+[profile.dev.package."*"]
+opt-level = 3
+[profile.dev.package.pp-core]
+opt-level = 3
+[profile.dev.package.pp-file]
+opt-level = 3

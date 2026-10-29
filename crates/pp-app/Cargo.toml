@@ -1,0 +1,23 @@
+[package]
+name = "pp-app"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[[bin]]
+name = "primitivepaint"
+path = "src/main.rs"
+
+[dependencies]
+pp-core.workspace = true
+pp-file.workspace = true
+winit.workspace = true
+wgpu.workspace = true
+pollster.workspace = true
+bytemuck.workspace = true
+log.workspace = true
+env_logger.workspace = true
+fontdue.workspace = true
+
+[target.'cfg(windows)'.dependencies]
+rfd.workspace = true
