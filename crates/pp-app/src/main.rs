@@ -366,6 +366,11 @@ impl App {
 
     /// すべてのタブについて、保存していない変更を確かめる。アプリを閉じてよければ true。
     fn confirm_quit(&mut self) -> bool {
+        // 閉じる操作中にポインタの Release が届かない場合でも、
+        // 描画を確定してから全タブの未保存確認を行う。
+        if self.drawing() {
+            self.stroke_end();
+        }
         for index in 0..self.works.len() {
             self.switch_to(index);
             if !self.confirm_discard() {
