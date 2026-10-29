@@ -59,15 +59,9 @@ mod native {
             .set_level(MessageLevel::Warning)
             .set_title("primitivepaint")
             .set_description(format!("「{file_name}」への変更を保存しますか？"))
-            .set_buttons(MessageButtons::YesNoCancelCustom(
-                "保存する".to_string(),
-                "保存しない".to_string(),
-                "キャンセル".to_string(),
-            ))
+            .set_buttons(MessageButtons::YesNoCancel)
             .show();
         match result {
-            MessageDialogResult::Custom(label) if label == "保存する" => UnsavedChoice::Save,
-            MessageDialogResult::Custom(label) if label == "保存しない" => UnsavedChoice::Discard,
             MessageDialogResult::Yes => UnsavedChoice::Save,
             MessageDialogResult::No => UnsavedChoice::Discard,
             _ => UnsavedChoice::Cancel,
