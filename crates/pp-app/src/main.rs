@@ -19,7 +19,7 @@ use winit::application::ApplicationHandler;
 use winit::event::{ElementState, Force, MouseButton, MouseScrollDelta, TouchPhase, WindowEvent};
 use winit::event_loop::{ActiveEventLoop, ControlFlow, EventLoop};
 use winit::keyboard::{Key, ModifiersState, NamedKey};
-use winit::window::{Window, WindowId};
+use winit::window::{Cursor, CursorIcon, CustomCursor, Window, WindowId};
 
 use files::{FileFilter, IMPORT_FILTER, UnsavedChoice, WORK_FILTER};
 use pp_file::{CopyFormat, ExportSettings, ImageFormat, OutputSize};
@@ -112,6 +112,8 @@ struct App {
     pivoting: Option<PivotDrag>,
     /// OS のカーソルを隠して、ペン先の輪郭を出しているか。
     cursor_hidden: bool,
+    /// キャンバスの上で OS のカーソルの代わりに出す、透明なカーソル。
+    blank_cursor: Option<CustomCursor>,
     /// キャンバスのまわりのパネル（ツール・パレット・紙の一覧など）。
     chrome: Chrome,
 }
@@ -166,6 +168,7 @@ impl App {
             smooth_rotate: false,
             pivoting: None,
             cursor_hidden: false,
+            blank_cursor: None,
             chrome: Chrome::new(Font::load_system()),
         };
         for pen in &mut app.pens {
@@ -782,14 +785,28 @@ impl App {
         let radius = if busy { 0.0 } else { self.pens[self.current_pen].size() * 0.5 * self.work().view.zoom };
         let brush = over_canvas.then_some(BrushCursor { x, y, radius });
         self.chrome.set_brush_cursor(brush);
-        let hide = brush.is_some();
-        if hide != self.cursor_hidden {
-            self.cursor_hidden = hide;
-            if let Some(window) = &self.window {
-                window.set_cursor_visible(!hide);
+        self.set_cursor_hidden(brush.is_some());
+        self.request_redraw();
+    }
+
+    /// OS のカーソルを、透明なカーソルに替えて隠すか、矢印に戻す。
+    /// `set_cursor_visible` は Windows ではマウスがウィンドウに入ったと分かっている間しか効かず、
+    /// ペン（WM_POINTER）だけで動かすとマウスの移動が届かないため矢印が出たままになる。
+    /// カーソルの形はペンでも WM_SETCURSOR で毎回当てはめられるので、透明な形にして隠す。
+    fn set_cursor_hidden(&mut self, hide: bool) {
+        if hide == self.cursor_hidden {
+            return;
+        }
+        let Some(window) = &self.window else { return };
+        self.cursor_hidden = hide;
+        match (&self.blank_cursor, hide) {
+            (Some(blank), true) => window.set_cursor(Cursor::Custom(blank.clone())),
+            (None, true) => window.set_cursor_visible(false),
+            (_, false) => {
+                window.set_cursor(Cursor::Icon(CursorIcon::Default));
+                window.set_cursor_visible(true);
             }
         }
-        self.request_redraw();
     }
 
     fn sample_at(&self, x: f64, y: f64, pressure: f32) -> InputSample {
@@ -993,6 +1010,9 @@ impl ApplicationHandler for App {
             .with_title("primitivepaint")
             .with_inner_size(winit::dpi::LogicalSize::new(1440.0, 900.0));
         let window = Arc::new(event_loop.create_window(attrs).expect("ウィンドウを作成できません"));
+        // 1×1 の透明な画像。作れなければ set_cursor_visible で隠す
+        self.blank_cursor =
+            CustomCursor::from_rgba(vec![0; 4], 1, 1, 0, 0).ok().map(|source| event_loop.create_custom_cursor(source));
         let renderer = Renderer::new(window.clone(), (self.work().doc.width, self.work().doc.height));
         let (width, height) = renderer.surface_size();
         self.chrome.resize(width, height, window.scale_factor() as f32);
